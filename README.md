@@ -1,6 +1,6 @@
 <div align="center">
 
-<br /> <h1 style="font-size: 3rem; font-weight: 900;"> ZERONAUT.DOWNLOADER </h1>
+<br /> <h1 style="font-size: 3rem; font-weight: 900;"> Lyxkall.DOWNLOADER </h1>
 
 <h3 style="color: #a5f3fc;"> NO-WATERMARK MEDIA DOWNLOADER ENGINE // V.6.1 </h3>
 
@@ -85,4 +85,4 @@ Ensure the vercel.json file is in the root folder.
 
 Click Deploy.
 
-<div align="center"> <p> Created by <strong>rezaaplvv</strong> </p> </div>
+<div align="center"> <p> Created by <strong>Lyxkall</strong> </p> </div>

@@ -2,32 +2,31 @@ const axios = require("axios");
 
 async function fetchTikTok(url) {
   try {
-    // Memastikan link bersih dari parameter ?is_from_webapp=1 dsb.
-    const urlObj = new URL(url);
-    const cleanUrl = `${urlObj.origin}${urlObj.pathname}`;
-    
-    console.log(`[TIKTOK] Mengirim URL bersih: ${cleanUrl}`);
+    const cleanUrl = url.split('?')[0];
+    const response = await axios.post('https://www.puruboy.kozow.com/api/downloader/tiktok-v2', 
+    { "url": cleanUrl }, 
+    { 
+      headers: { 
+        'Content-Type': 'application/json',
+        // Ini kuncinya: Nyamar jadi Chrome Windows
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://www.tiktok.com/' 
+      } 
+    });
 
-    const response = await axios.post('https://www.puruboy.kozow.com/api/downloader/tiktok-v2', {
-      "url": cleanUrl 
-    }, { headers: { 'Content-Type': 'application/json' } });
+    const res = response.data;
+    if (!res?.result) throw new Error("API TikTok Gagal.");
 
-    const data = response.data.result;
-    if (!data) throw new Error("Data tidak ditemukan");
-
+    const data = res.result;
     return {
       status: true,
       title: data.title || "TikTok Video",
-      // Tambahkan referer kosong pada proxy wsrv agar TikTok tidak memblokir
-      thumbnail: `https://wsrv.nl/?url=${encodeURIComponent(data.thumbnail)}&output=jpg&we&n=-1`,
-      author: data.author || "TikTok User",
-      downloads: data.downloads.map(item => ({
-        text: item.type,
-        url: item.url
-      }))
+      // Tambahin &n=1 buat maksa refresh thumbnail yang tadinya pecah/mati
+      thumbnail: `https://wsrv.nl/?url=${encodeURIComponent(data.thumbnail)}&output=jpg&n=1`,
+      downloads: (data.downloads || []).map(d => ({ text: d.type, url: d.url }))
     };
   } catch (error) {
-    console.error("TikTok Error:", error.message);
+    console.error("TikTok Vercel Error:", error.message);
     throw error;
   }
 }

@@ -2,47 +2,32 @@ const axios = require("axios");
 
 async function fetchYouTube(url) {
   try {
-    console.log(`[YT SERVICE] Memproses URL: ${url}`);
+    const config = {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    };
 
-    const response = await axios.post('https://www.puruboy.kozow.com/api/downloader/youtube', {
-      "url": url
-    }, {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    const [vRes, aRes] = await Promise.allSettled([
+      axios.post('https://www.puruboy.kozow.com/api/downloader/youtube', { "url": url }, config),
+      axios.post('https://www.puruboy.kozow.com/api/downloader/ytmp3', { "url": url }, config)
+    ]);
 
-    const result = response.data;
+    const vData = vRes.status === 'fulfilled' ? vRes.value.data.result : null;
+    const aData = aRes.status === 'fulfilled' ? aRes.value.data.result : null;
 
-    // --- PERBAIKAN DI SINI ---
-    // Sesuai log terminalmu, datanya ada di dalam 'result' (huruf kecil), bukan 'data'
-    if (!result || !result.result) {
-      console.log("[DEBUG YT] Struktur salah atau gagal:", JSON.stringify(result));
-      throw new Error("API Puruboy tidak memberikan data valid.");
-    }
-
-    const ytData = result.result; // Mengambil objek 'result'
+    const downloads = [];
+    if (vData?.downloadUrl) downloads.push({ text: "Video MP4", url: vData.downloadUrl });
+    if (aData?.downloadUrl) downloads.push({ text: "Audio MP3", url: aData.downloadUrl });
 
     return {
       status: true,
-      title: ytData.title || "YouTube Video",
-      thumbnail: ytData.thumbnail ? `https://wsrv.nl/?url=${encodeURIComponent(ytData.thumbnail)}&output=jpg` : "",
-      author: result.author || "PuruBoy",
-      downloads: [
-        { 
-          text: `Download Video (${ytData.quality || 'HD'})`, 
-          url: ytData.downloadUrl 
-        },
-        // Tombol MP3 hanya akan muncul jika API memberikan key 'audioUrl' atau sejenisnya
-        ytData.audioUrl ? { 
-          text: "Download Audio (MP3)", 
-          url: ytData.audioUrl 
-        } : null
-      ].filter(item => item !== null && item.url) // Membersihkan item yang kosong
+      title: vData?.title || aData?.title || "YouTube Media",
+      thumbnail: vData?.thumbnail || aData?.thumbnail || "",
+      downloads: downloads
     };
-
   } catch (error) {
-    console.error("YouTube Service Error:", error.message);
-    throw new Error(error.message);
+    throw error;
   }
 }
-
 module.exports = { fetchYouTube };

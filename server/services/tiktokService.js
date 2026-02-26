@@ -1,69 +1,34 @@
 const axios = require("axios");
-const cheerio = require("cheerio");
 
-async function fetchTikTokData(videoUrl) {
-  const endpoint = "https://tikdownloader.io/api/ajaxSearch";
-
+async function fetchTikTok(url) {
   try {
-    const res = await axios.post(
-      endpoint,
-      new URLSearchParams({ q: videoUrl, lang: "en" }),
-      {
-        headers: {
-          accept: "*/*",
-          "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-          "x-requested-with": "XMLHttpRequest",
-          Referer: "https://tikdownloader.io/en",
-        },
-      }
-    );
+    // Memastikan link bersih dari parameter ?is_from_webapp=1 dsb.
+    const urlObj = new URL(url);
+    const cleanUrl = `${urlObj.origin}${urlObj.pathname}`;
+    
+    console.log(`[TIKTOK] Mengirim URL bersih: ${cleanUrl}`);
 
-    const html = res.data.data;
-    const $ = cheerio.load(html);
+    const response = await axios.post('https://www.puruboy.kozow.com/api/downloader/tiktok-v2', {
+      "url": cleanUrl 
+    }, { headers: { 'Content-Type': 'application/json' } });
 
-    const title = $(".thumbnail h3").text().trim() || null;
-    const thumbnail = $(".thumbnail img").attr("src") || null;
-
-    const downloads = [];
-
-    // ===========================
-    // VIDEO / AUDIO DOWNLOADS
-    // ===========================
-    $(".dl-action a").each((i, el) => {
-      const text = $(el).text().trim();
-      const url = $(el).attr("href");
-
-      // ❗ DO NOT push empty or "#" URLs
-      if (!url || url === "#") return;
-
-      downloads.push({ text, url });
-    });
-
-    // ===========================
-    // PHOTO MODE DOWNLOADS
-    // ===========================
-    const photos = $(".photo-list .download-box li");
-
-    if (photos.length > 0) {
-      photos.each((i, el) => {
-        const text = $(el).find("a").text().trim();
-        const url = $(el).find("a").attr("href");
-
-        if (!url || url === "#") return;
-
-        downloads.push({ text, url });
-      });
-    }
+    const data = response.data.result;
+    if (!data) throw new Error("Data tidak ditemukan");
 
     return {
-      status: res.data.status,
-      title,
-      thumbnail,
-      downloads,
+      status: true,
+      title: data.title || "TikTok Video",
+      // Tambahkan referer kosong pada proxy wsrv agar TikTok tidak memblokir
+      thumbnail: `https://wsrv.nl/?url=${encodeURIComponent(data.thumbnail)}&output=jpg&we&n=-1`,
+      author: data.author || "TikTok User",
+      downloads: data.downloads.map(item => ({
+        text: item.type,
+        url: item.url
+      }))
     };
   } catch (error) {
-    throw new Error(`TikDownloader request failed: ${error.message}`);
+    console.error("TikTok Error:", error.message);
+    throw error;
   }
 }
-
-module.exports = { fetchTikTokData };
+module.exports = { fetchTikTok };

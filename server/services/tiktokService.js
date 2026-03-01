@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-const PURUBOY_API = "https://www.puruboy.kozow.com/api/downloader/tiktok-v2";
+const PURUBOY_API = "https://puruboy-api.vercel.app/api/downloader/tiktok-v2";
 
 async function fetchTikTok(url) {
   try {

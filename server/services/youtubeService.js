@@ -1,7 +1,7 @@
 const axios = require("axios");
 
-const PURUBOY_VIDEO = "https://www.puruboy.kozow.com/api/downloader/youtube";
-const PURUBOY_AUDIO = "https://www.puruboy.kozow.com/api/downloader/ytmp3";
+const PURUBOY_VIDEO = "https://puruboy-api.vercel.app/api/downloader/youtube";
+const PURUBOY_AUDIO = "https://puruboy-api.vercel.app/api/downloader/ytmp3";
 
 const HEADERS = {
   "Content-Type": "application/json",

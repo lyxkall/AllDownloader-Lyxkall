@@ -1,33 +1,67 @@
 const axios = require("axios");
 
+const PURUBOY_VIDEO = "https://www.puruboy.kozow.com/api/downloader/youtube";
+const PURUBOY_AUDIO = "https://www.puruboy.kozow.com/api/downloader/ytmp3";
+
+const HEADERS = {
+  "Content-Type": "application/json",
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  Accept: "application/json",
+  "Accept-Language": "en-US,en;q=0.9",
+  Referer: "https://www.youtube.com/",
+};
+
 async function fetchYouTube(url) {
   try {
-    const config = {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
-    };
-
-    const [vRes, aRes] = await Promise.allSettled([
-      axios.post('https://www.puruboy.kozow.com/api/downloader/youtube', { "url": url }, config),
-      axios.post('https://www.puruboy.kozow.com/api/downloader/ytmp3', { "url": url }, config)
+    // Jalankan video & audio secara paralel
+    const [videoResult, audioResult] = await Promise.allSettled([
+      axios.post(PURUBOY_VIDEO, { url }, { headers: HEADERS, timeout: 20000 }),
+      axios.post(PURUBOY_AUDIO, { url }, { headers: HEADERS, timeout: 20000 }),
     ]);
 
-    const vData = vRes.status === 'fulfilled' ? vRes.value.data.result : null;
-    const aData = aRes.status === 'fulfilled' ? aRes.value.data.result : null;
+    const videoData = videoResult.status === "fulfilled" ? videoResult.value.data?.result : null;
+    const audioData = audioResult.status === "fulfilled" ? audioResult.value.data?.result : null;
+
+    if (!videoData?.downloadUrl) throw new Error("Gagal mengambil data video YouTube.");
 
     const downloads = [];
-    if (vData?.downloadUrl) downloads.push({ text: "Video MP4", url: vData.downloadUrl });
-    if (aData?.downloadUrl) downloads.push({ text: "Audio MP3", url: aData.downloadUrl });
+
+    // Video
+    downloads.push({
+      text: `Video MP4 ${videoData.quality || "HD"}${videoData.size ? ` (${videoData.size})` : ""}`.trim(),
+      type: "video",
+      url: videoData.downloadUrl,
+    });
+
+    // Audio — field-nya "download_url" (beda dengan video yang "downloadUrl")
+    if (audioData?.download_url) {
+      downloads.push({
+        text: "Audio MP3",
+        type: "audio",
+        url: audioData.download_url,
+      });
+    }
 
     return {
       status: true,
-      title: vData?.title || aData?.title || "YouTube Media",
-      thumbnail: vData?.thumbnail || aData?.thumbnail || "",
-      downloads: downloads
+      title: videoData.title || audioData?.title || "YouTube Video",
+      thumbnail: videoData.thumbnail || null,
+      quality: videoData.quality || "HD",
+      size: videoData.size || null,
+      downloads,
     };
   } catch (error) {
+    console.error("[YouTube] Error:", error.message);
+
+    if (error.code === "ECONNREFUSED" || error.code === "ENOTFOUND") {
+      throw new Error("Tidak bisa terhubung ke API server.");
+    }
+    if (error.response?.status === 403) {
+      throw new Error("API diblokir dari server ini (403).");
+    }
+
     throw error;
   }
 }
+
 module.exports = { fetchYouTube };
